@@ -4,7 +4,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +12,7 @@ import com.adyen.pos.android.barcodereader.BarcodeListener
 import com.adyen.pos.android.barcodereader.BarcodeReadingTask
 import com.hsm.barcode.DecoderConfigValues
 import com.hsm.barcode.SymbologyConfig
+import com.jollyes.barcodereaderdemo.databinding.ActivityMainBinding
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanIntentResult
 import com.journeyapps.barcodescanner.ScanOptions
@@ -26,10 +26,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val btnScan = findViewById<Button>(R.id.btnScan)
-        btnScan.setOnClickListener {
-            openCustomZxingScanner()
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        Log.d(TAG, "onCreate: ${getDeviceDetails()}")
+
+        binding.tvDeviceDetails.text = getDeviceDetails()
+
+        binding.btnScan.setOnClickListener {
+            updatedBarcodeScanner()
 //            if (Build.BRAND.lowercase() == "adyen" || Build.MODEL.lowercase() == "s1e") {
 //            } else {
 //                Toast.makeText(
@@ -43,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updatedBarcodeScanner() {
+
         // Create BarcodeReadingTask with symbology, e.g. SYM_ALL or SYM_QR
         val barcodeReadingTask = BarcodeReadingTask(
             listOf(SymbologyConfig(DecoderConfigValues.SymbologyID.SYM_EAN13)
@@ -59,52 +65,26 @@ class MainActivity : AppCompatActivity() {
             override fun onBarcodeRead(barcode: Barcode): Boolean {
                 // Handle barcode and return whether scanning should continue
                 Log.d(TAG, "onBarcodeRead: ${barcode.data}")
-                Toast.makeText(
-                    this@MainActivity,
-                    "onBarcodeRead: ${barcode.data}",
-                    Toast.LENGTH_LONG
-                ).show()
+                binding.tvScanResult.text = "On Barcode Read Success - ${barcode.data}"
                 return true
             }
 
             override fun onError(e: Exception) {
                 //  Handle error
-                Log.d(TAG, "onError: $e")
-                Toast.makeText(this@MainActivity, "onBarcodeRead: $e", Toast.LENGTH_LONG).show()
+                Log.d(TAG, "onError: ${e.localizedMessage}")
+                binding.tvScanResult.text = "On Barcode Read Error - ${e.localizedMessage}"
             }
         }
 
-        barcodeReadingTask.start(barcodeListener)
-    }
-
-
-    private fun openBarcodeScanner() {
-        // Create BarcodeReadingTask with symbology, e.g. SYM_ALL or SYM_QR
-        val symbology = DecoderConfigValues.SymbologyID.SYM_QR
-        val barcodeReadingTask = BarcodeReadingTask(listOf(SymbologyConfig(symbology)))
-
-        // Setup listener
-        val barcodeListener = object : BarcodeListener {
-            override fun onBarcodeRead(barcode: Barcode): Boolean {
-                // Handle barcode and return whether scanning should continue
-                Log.d(TAG, "onBarcodeRead: ${barcode.data}")
-                Toast.makeText(
-                    this@MainActivity,
-                    "onBarcodeRead: ${barcode.data}",
-                    Toast.LENGTH_LONG
-                ).show()
-                return true
-            }
-
-            override fun onError(e: Exception) {
-                //  Handle error
-                Toast.makeText(this@MainActivity, "onBarcodeRead: $e", Toast.LENGTH_LONG).show()
-                Log.d(TAG, "onError: $e")
-            }
+        if (binding.btnScan.text == "Open Scanner") {
+            binding.btnScan.text = "Close Scanner"
+            barcodeReadingTask.start(barcodeListener)
+        } else {
+            binding.btnScan.text = "Open Scanner"
+            barcodeReadingTask.stop()
         }
-
-        barcodeReadingTask.start(barcodeListener)
     }
+
 
     private fun getSystemDetail(): String {
         try {
@@ -131,6 +111,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getDeviceDetails(): String {
+        return try {
+            "Brand: ${Build.BRAND} \n\n" +
+                    ("DeviceID: " + Settings.Secure.getString(
+                        contentResolver,
+                        Settings.Secure.ANDROID_ID
+                    ) + " \n\n") +
+                    "Model: ${Build.MODEL} \n\n" +
+                    "ID: ${Build.ID} \n\n" +
+                    "SDK: ${Build.VERSION.SDK_INT} \n\n" +
+                    "Manufacture: ${Build.MANUFACTURER} \n\n"
+        } catch (e: Exception) {
+            e.toString()
+        }
+    }
+
     fun openCustomZxingScanner() {
         zxingActivityResultLauncher.launch(
             ScanContract().createIntent(
@@ -145,6 +141,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    private lateinit var binding: ActivityMainBinding
     private val zxingActivityResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
 
