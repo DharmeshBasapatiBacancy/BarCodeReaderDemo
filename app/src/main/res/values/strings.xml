@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">BarCodeReaderDemo</string>
+    <string name="label_open_scanner">Open Scanner</string>
+    <string name="label_close_scanner">Close Scanner</string>
 </resources>
